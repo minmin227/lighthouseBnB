@@ -18,13 +18,14 @@ const pool = new Pool ({
  */
 const getUserWithEmail = function(email) {
 
-  const queryString = `SELECT email FROM users WHERE email = $1`
+  const queryString = `SELECT * FROM users WHERE email = $1`
   return pool.query(queryString, [email])
   .then (res => {
     if (res) {
-      return res.rows;
+      console.log(res.rows[0]);
+      return res.rows[0];
     } else {
-      return null
+      return null;
     }
   })
 }
@@ -38,11 +39,11 @@ exports.getUserWithEmail = getUserWithEmail;
  */
 const getUserWithId = function(id) {
   
-  const queryString = `SELECT id FROM users WHERE id = $1`
+  const queryString = `SELECT * FROM users WHERE id = $1`
   return pool.query(queryString, [id])
   .then (res => {
     if (res) {
-      return res.rows;
+      console.log(id);
     } else {
       return null;
     }
@@ -61,7 +62,8 @@ const addUser =  function(user) {
   return pool.query(insertString, [user.name, user.email, user.password])
   .then (res => {
     if (res) {
-      console.log(res.rows);
+      console.log(res.rows[0]);
+      return res.rows[0];
     } else {
       return null;
     }
@@ -78,8 +80,25 @@ exports.addUser = addUser;
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
-}
+  const queryString = `SELECT 
+  properties.*, reservations.id, reservations.start_date as start_date, AVG(rating) as rating
+  FROM 
+  reservations JOIN properties ON reservations.property_id = properties.id
+  JOIN property_reviews ON properties.id = property_reviews.property_id 
+  WHERE reservations.guest_id = $1 AND reservations.end_date < now()::date
+  GROUP BY properties.id, reservations.id
+  ORDER BY start_date
+  LIMIT $2;`
+
+  return pool.query(queryString, [guest_id, limit])
+  .then(res => {
+    if (res) {
+      return res.rows;
+    } else {
+      return null
+    }
+  })
+} 
 exports.getAllReservations = getAllReservations;
 
 /// Properties
@@ -94,7 +113,7 @@ exports.getAllReservations = getAllReservations;
 const getAllProperties = function(options, limit = 10) {
   return pool.query(`select * from properties LIMIT $1`, [limit])
   .then(res => {
-    return res.rows
+    return res.rows;
   });
 }
 exports.getAllProperties = getAllProperties;
